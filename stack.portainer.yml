@@ -1,0 +1,32 @@
+services:
+  equinav:
+    image: equinav:latest
+    container_name: equinav
+    restart: unless-stopped
+    ports:
+      - "5300:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATA_DIR: /app/data
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_TTL: ${JWT_TTL:-8h}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    volumes:
+      - equinav-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  equinav-data:
