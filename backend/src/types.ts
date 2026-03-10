@@ -9,7 +9,14 @@ export const mapFloorSchema = z.object({
   building: z.string().trim().min(1),
   floorLevel: z.number().int(),
   label: z.string().trim().min(1),
-  imageUrl: z.string().trim().url().optional(),
+  imageUrl: z
+    .string()
+    .trim()
+    .min(1)
+    .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
+      message: "imageUrl must be absolute (http/https) or root-relative (/assets/...)",
+    })
+    .optional(),
   width: z.number().positive().optional(),
   height: z.number().positive().optional(),
 });

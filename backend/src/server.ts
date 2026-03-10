@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import express, { type Request, type Response } from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import bcrypt from "bcryptjs";
+import multer from "multer";
 import { z } from "zod";
 import { config } from "./config.js";
 import { requireAuth, requireRole, signAuthToken } from "./auth.js";
@@ -23,6 +24,7 @@ import { findShortestPath } from "./routing.js";
 import { loginRequestSchema, mapImportSchema, routeRequestSchema } from "./types.js";
 
 initializeDatabase();
+fs.mkdirSync(config.assetsDir, { recursive: true });
 
 const app = express();
 
@@ -32,8 +34,23 @@ app.use(
     origin: config.nodeEnv === "production" ? false : config.corsOrigins,
   }),
 );
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: config.maxJsonPayload }));
 app.use(morgan("dev"));
+app.use("/assets", express.static(config.assetsDir));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_request, file, callback) => {
+    if (["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.mimetype)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Only PNG, JPG, JPEG or WEBP are allowed."));
+  },
+});
 
 app.get("/api/health", (_request, response) => {
   response.json({
@@ -119,6 +136,37 @@ app.post(
         error: error instanceof Error ? error.message : "Map activation failed.",
       });
     }
+  },
+);
+
+app.post(
+  "/api/admin/assets/upload",
+  requireAuth,
+  requireRole("admin", "editor"),
+  upload.single("file"),
+  (request, response) => {
+    if (!request.file) {
+      response.status(400).json({ error: "No file uploaded." });
+      return;
+    }
+
+    const extension = path.extname(request.file.originalname).toLowerCase() || ".png";
+    const baseName = path
+      .basename(request.file.originalname, extension)
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const safeBaseName = baseName.length > 0 ? baseName : "map";
+    const fileName = `${Date.now()}-${safeBaseName}${extension}`;
+    const targetPath = path.join(config.assetsDir, fileName);
+
+    fs.writeFileSync(targetPath, request.file.buffer);
+    response.status(201).json({
+      fileName,
+      assetUrl: `/assets/${fileName}`,
+    });
   },
 );
 
@@ -208,6 +256,20 @@ app.post("/api/kiosk/route", (request, response) => {
     path: pathNodes,
     floors: [...floorMap.values()],
   });
+});
+
+app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
+  if (error instanceof multer.MulterError) {
+    response.status(400).json({ error: error.message });
+    return;
+  }
+
+  if (error instanceof Error) {
+    response.status(400).json({ error: error.message });
+    return;
+  }
+
+  response.status(500).json({ error: "Unexpected server error." });
 });
 
 const frontendIndexFile = path.resolve(config.frontendDistPath, "index.html");

@@ -6,7 +6,7 @@ Indoor-Navigation mit Kiosk-Frontend (Empfang) und separatem Admin-Bereich (Kart
 
 - `Kiosk` unter `/`: Suche nach Raum/Modul und Routenanzeige.
 - `30s Auto-Reset`: Bei Inaktivitaet springt die Kiosk-Ansicht nach 30 Sekunden auf die Startsuche zurueck.
-- `Admin` unter `/admin`: Login, Karten-Import, Karten-Version aktivieren.
+- `Admin` unter `/admin`: Login, visueller Karteneditor (PNG/JPG/WEBP hochladen, Boxen zeichnen, speichern), Karten-Version aktivieren.
 - `Backend`: Express + SQLite (WAL), JWT-geschuetzte Admin-APIs.
 - `Container`: Ein Container (`Containerfile`) fuer Podman/VM.
 
@@ -92,6 +92,20 @@ Healthcheck kann spaeter ueber `/api/health` konfiguriert werden.
 
 3. Aufruf: `http://<host>:5300`
 
+## Admin-Workflow (visuell)
+
+1. Unter `/admin/login` anmelden.
+2. Kartenbild hochladen (PNG/JPG/WEBP).
+3. Im Editor Boxen zeichnen fuer:
+   - Raum
+   - Flur
+   - Eingang
+   - Treppe
+   - Aufzug
+   - POI
+4. Raumdetails direkt pflegen (Code, Name, Modul).
+5. Karte speichern (optional sofort aktivieren).
+
 ## Wichtige Umgebungsvariablen
 
 - `PORT`: HTTP-Port (Default `8080`)
@@ -99,11 +113,13 @@ Healthcheck kann spaeter ueber `/api/health` konfiguriert werden.
 - `ADMIN_USERNAME`: Initialer Admin-Username
 - `ADMIN_PASSWORD`: Initiales Admin-Passwort
 - `DATA_DIR`: Verzeichnis fuer SQLite-Datei
+- `ASSETS_DIR`: Verzeichnis fuer hochgeladene Kartenbilder
+- `MAX_JSON_PAYLOAD`: JSON-Limit (wichtig fuer groessere Kartendaten)
 - `CORS_ORIGINS`: fuer lokalen Dev-Betrieb
 
 ## Karten-Importformat (JSON)
 
-Die Admin-Seite akzeptiert folgendes Format:
+Das Backend akzeptiert weiterhin dieses Format (z. B. fuer Integrationen/API-Importe):
 
 ```json
 {

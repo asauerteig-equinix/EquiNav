@@ -66,6 +66,28 @@ export const adminApi = {
       token,
       body: payload,
     }),
+  uploadAsset: async (
+    token: string,
+    file: File,
+  ): Promise<{ fileName: string; assetUrl: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/api/admin/assets/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(errorBody?.error ?? `Upload failed (${response.status})`);
+    }
+
+    return (await response.json()) as { fileName: string; assetUrl: string };
+  },
   activateMapVersion: async (token: string, mapVersionId: number): Promise<void> => {
     await request<{ message: string }>(`/api/admin/maps/${mapVersionId}/activate`, {
       method: "POST",

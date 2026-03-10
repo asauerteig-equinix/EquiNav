@@ -43,5 +43,9 @@ export const config = {
   dbPath:
     process.env.DB_PATH ??
     path.resolve(process.env.DATA_DIR ?? path.resolve(repoDir, "data"), "equinav.sqlite"),
+  assetsDir:
+    process.env.ASSETS_DIR ??
+    path.resolve(process.env.DATA_DIR ?? path.resolve(repoDir, "data"), "assets"),
+  maxJsonPayload: process.env.MAX_JSON_PAYLOAD ?? "25mb",
   corsOrigins: parseCsv(process.env.CORS_ORIGINS, ["http://localhost:5173"]),
 };
