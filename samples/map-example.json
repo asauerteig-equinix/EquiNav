@@ -1,0 +1,134 @@
+{
+  "name": "Demo Campus 2026-03",
+  "description": "Beispielkarte fuer den ersten Import",
+  "startNodeId": "reception",
+  "floors": [
+    {
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "label": "EG",
+      "width": 800,
+      "height": 450
+    },
+    {
+      "building": "Hauptgebaeude",
+      "floorLevel": 1,
+      "label": "1. OG",
+      "width": 800,
+      "height": 450
+    }
+  ],
+  "nodes": [
+    {
+      "id": "reception",
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "x": 80,
+      "y": 220,
+      "type": "entrance",
+      "label": "Empfang"
+    },
+    {
+      "id": "eg_flur_1",
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "x": 250,
+      "y": 220,
+      "type": "hallway"
+    },
+    {
+      "id": "treppe_eg",
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "x": 380,
+      "y": 220,
+      "type": "stairs",
+      "label": "Treppe EG"
+    },
+    {
+      "id": "treppe_og",
+      "building": "Hauptgebaeude",
+      "floorLevel": 1,
+      "x": 380,
+      "y": 220,
+      "type": "stairs",
+      "label": "Treppe 1. OG"
+    },
+    {
+      "id": "og_flur_1",
+      "building": "Hauptgebaeude",
+      "floorLevel": 1,
+      "x": 550,
+      "y": 220,
+      "type": "hallway"
+    },
+    {
+      "id": "raum_101",
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "x": 520,
+      "y": 220,
+      "type": "room",
+      "label": "Raum 101"
+    },
+    {
+      "id": "raum_201",
+      "building": "Hauptgebaeude",
+      "floorLevel": 1,
+      "x": 690,
+      "y": 220,
+      "type": "room",
+      "label": "Raum 201"
+    }
+  ],
+  "rooms": [
+    {
+      "code": "R101",
+      "name": "Raum 101",
+      "moduleName": "Modul A",
+      "building": "Hauptgebaeude",
+      "floorLevel": 0,
+      "nodeId": "raum_101"
+    },
+    {
+      "code": "R201",
+      "name": "Raum 201",
+      "moduleName": "Modul B",
+      "building": "Hauptgebaeude",
+      "floorLevel": 1,
+      "nodeId": "raum_201"
+    }
+  ],
+  "edges": [
+    {
+      "from": "reception",
+      "to": "eg_flur_1",
+      "accessible": true
+    },
+    {
+      "from": "eg_flur_1",
+      "to": "treppe_eg",
+      "accessible": true
+    },
+    {
+      "from": "treppe_eg",
+      "to": "raum_101",
+      "accessible": true
+    },
+    {
+      "from": "treppe_eg",
+      "to": "treppe_og",
+      "accessible": false
+    },
+    {
+      "from": "treppe_og",
+      "to": "og_flur_1",
+      "accessible": true
+    },
+    {
+      "from": "og_flur_1",
+      "to": "raum_201",
+      "accessible": true
+    }
+  ]
+}

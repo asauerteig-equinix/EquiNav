@@ -1,0 +1,24 @@
+{
+  "name": "equinav",
+  "version": "1.0.0",
+  "description": "Indoor navigation kiosk with separate admin management.",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend && npm run build --workspace backend",
+    "start": "npm run start --workspace backend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "keywords": [
+    "indoor-navigation",
+    "kiosk",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module"
+}
