@@ -79,13 +79,7 @@ Healthcheck kann spaeter ueber `/api/health` konfiguriert werden.
 
 ## Portainer (Docker-Stack)
 
-1. Auf dem Host im Projektordner das Image bauen:
-
-```bash
-docker build -t equinav:latest -f Containerfile .
-```
-
-2. In Portainer:
+1. In Portainer:
    - `Stacks` -> `Add stack`
    - Name z. B. `equinav`
    - Inhalt aus [stack.portainer.yml](C:\Users\Simaxe\GitHub Repos\EquiNav\stack.portainer.yml) einfuegen
@@ -93,6 +87,8 @@ docker build -t equinav:latest -f Containerfile .
      - `JWT_SECRET`
      - `ADMIN_PASSWORD`
    - `Deploy the stack`
+
+2. Der Stack baut das Image beim Deploy selbst (`build` in `stack.portainer.yml`), ein separates `docker build` ist nicht noetig.
 
 3. Aufruf: `http://<host>:5300`
 

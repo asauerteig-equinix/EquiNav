@@ -1,6 +1,10 @@
 services:
   equinav:
     image: equinav:latest
+    build:
+      context: .
+      dockerfile: Containerfile
+    pull_policy: never
     container_name: equinav
     restart: unless-stopped
     ports:
