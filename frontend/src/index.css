@@ -149,6 +149,10 @@ body {
   width: 100%;
 }
 
+.admin-wide {
+  max-width: 1600px;
+}
+
 .inline-row {
   display: flex;
   gap: 10px;
@@ -198,6 +202,12 @@ body {
   gap: 16px;
 }
 
+.editor-grid-large {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+}
+
 .editor-sidebar {
   display: grid;
   gap: 10px;
@@ -224,6 +234,26 @@ body {
   min-width: 0;
 }
 
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.editor-canvas-scroll {
+  border: 1px solid #c6d7e2;
+  border-radius: 12px;
+  background: #f3f8fc;
+  max-height: 78vh;
+  overflow: auto;
+  padding: 10px;
+}
+
+.editor-canvas-size {
+  position: relative;
+}
+
 .editor-placeholder {
   border: 2px dashed #b3c8d5;
   border-radius: 12px;
@@ -235,13 +265,11 @@ body {
 
 .editor-stage {
   position: relative;
-  width: 100%;
-  max-height: 76vh;
-  border: 1px solid #c6d7e2;
-  border-radius: 12px;
-  background-size: contain;
+  border: 1px solid #aac0ce;
+  border-radius: 8px;
+  background-size: 100% 100%;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: top left;
   background-color: #f3f8fc;
   overflow: hidden;
   user-select: none;
@@ -340,6 +368,10 @@ body {
   }
 
   .editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-grid-large {
     grid-template-columns: 1fr;
   }
 

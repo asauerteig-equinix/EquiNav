@@ -19,6 +19,8 @@ type ActiveMap = {
   start_node_id: number | null;
 };
 
+const GLOBAL_START_NODE_KEY = "global_start_node_external_id";
+
 export const ensureDataDirectory = (): void => {
   fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 };
@@ -105,6 +107,13 @@ const createSchema = (): void => {
       FOREIGN KEY(to_node_id) REFERENCES nodes(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      setting_key TEXT PRIMARY KEY,
+      setting_value TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_map_versions_active ON map_versions(is_active);
     CREATE INDEX IF NOT EXISTS idx_rooms_search ON rooms(code, name, module_name);
     CREATE INDEX IF NOT EXISTS idx_edges_map ON edges(map_version_id);
@@ -139,6 +148,19 @@ export const getUserByUsername = (username: string): DbUser | undefined =>
     )
     .get(username);
 
+export const getGlobalStartNodeExternalId = (): string | null => {
+  const setting = db
+    .prepare<
+      { key: string },
+      {
+        setting_value: string;
+      }
+    >("SELECT setting_value FROM app_settings WHERE setting_key = @key")
+    .get({ key: GLOBAL_START_NODE_KEY });
+
+  return setting?.setting_value ?? null;
+};
+
 type FloorInfo = {
   building: string;
   floorLevel: number;
@@ -171,6 +193,16 @@ export const importMapVersion = (payload: MapImportPayload): number => {
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
   const updateStartNode = db.prepare("UPDATE map_versions SET start_node_id = ? WHERE id = ?");
+  const getSetting = db.prepare<
+    { key: string },
+    {
+      setting_value: string;
+    }
+  >("SELECT setting_value FROM app_settings WHERE setting_key = @key");
+  const insertSetting = db.prepare(
+    `INSERT INTO app_settings(setting_key, setting_value, created_at, updated_at)
+     VALUES (?, ?, ?, ?)`,
+  );
 
   const transaction = db.transaction((mapPayload: MapImportPayload): number => {
     const now = new Date().toISOString();
@@ -314,9 +346,21 @@ export const importMapVersion = (payload: MapImportPayload): number => {
       );
     }
 
-    const startNodeId = nodeIdByExternalId.get(mapPayload.startNodeId);
+    const globalStartSetting = getSetting.get({ key: GLOBAL_START_NODE_KEY });
+    const effectiveStartNodeExternalId = globalStartSetting?.setting_value ?? mapPayload.startNodeId;
+
+    const startNodeId = nodeIdByExternalId.get(effectiveStartNodeExternalId);
     if (!startNodeId) {
+      if (globalStartSetting) {
+        throw new Error(
+          "Der globale Kiosk-Startpunkt fehlt in dieser Karte. Bitte markiere denselben Startbereich wie in der ersten Kartenversion.",
+        );
+      }
       throw new Error("startNodeId does not exist in nodes.");
+    }
+
+    if (!globalStartSetting) {
+      insertSetting.run(GLOBAL_START_NODE_KEY, effectiveStartNodeExternalId, now, now);
     }
     updateStartNode.run(startNodeId, mapVersionId);
 
@@ -340,6 +384,205 @@ export const activateMapVersion = (mapVersionId: number): void => {
   });
 
   transaction(mapVersionId);
+};
+
+export const deleteMapVersion = (mapVersionId: number): void => {
+  const transaction = db.transaction((id: number) => {
+    const existingMap = db
+      .prepare<
+        { id: number },
+        {
+          id: number;
+          is_active: number;
+        }
+      >("SELECT id, is_active FROM map_versions WHERE id = @id")
+      .get({ id });
+
+    if (!existingMap) {
+      throw new Error("Map version not found.");
+    }
+
+    db.prepare("DELETE FROM map_versions WHERE id = ?").run(id);
+  });
+
+  transaction(mapVersionId);
+};
+
+export const getMapVersionImportPayload = (
+  mapVersionId: number,
+): (MapImportPayload & { mapVersionId: number; isActive: boolean }) | undefined => {
+  const mapVersion = db
+    .prepare<
+      { id: number },
+      {
+        id: number;
+        name: string;
+        description: string | null;
+        is_active: number;
+        start_node_id: number | null;
+      }
+    >("SELECT id, name, description, is_active, start_node_id FROM map_versions WHERE id = @id")
+    .get({ id: mapVersionId });
+
+  if (!mapVersion || !mapVersion.start_node_id) {
+    return undefined;
+  }
+
+  const startNode = db
+    .prepare<
+      { nodeId: number },
+      {
+        external_id: string;
+      }
+    >("SELECT external_id FROM nodes WHERE id = @nodeId")
+    .get({ nodeId: mapVersion.start_node_id });
+  if (!startNode) {
+    return undefined;
+  }
+
+  const floors = db
+    .prepare<
+      { mapVersionId: number },
+      {
+        building: string;
+        floor_level: number;
+        label: string;
+        image_url: string | null;
+        width: number;
+        height: number;
+      }
+    >(
+      `SELECT building, floor_level, label, image_url, width, height
+       FROM floors
+       WHERE map_version_id = @mapVersionId
+       ORDER BY building ASC, floor_level ASC`,
+    )
+    .all({ mapVersionId })
+    .map((floor) => ({
+      building: floor.building,
+      floorLevel: floor.floor_level,
+      label: floor.label,
+      imageUrl: floor.image_url ?? undefined,
+      width: floor.width,
+      height: floor.height,
+    }));
+
+  const nodes = db
+    .prepare<
+      { mapVersionId: number },
+      {
+        external_id: string;
+        node_type: "hallway" | "entrance" | "stairs" | "elevator" | "room" | "poi";
+        label: string | null;
+        x: number;
+        y: number;
+        building: string;
+        floor_level: number;
+      }
+    >(
+      `
+      SELECT
+        n.external_id,
+        n.node_type,
+        n.label,
+        n.x,
+        n.y,
+        f.building,
+        f.floor_level
+      FROM nodes n
+      INNER JOIN floors f ON f.id = n.floor_id
+      WHERE n.map_version_id = @mapVersionId
+    `,
+    )
+    .all({ mapVersionId })
+    .map((node) => ({
+      id: node.external_id,
+      type: node.node_type,
+      label: node.label ?? undefined,
+      x: node.x,
+      y: node.y,
+      building: node.building,
+      floorLevel: node.floor_level,
+    }));
+
+  const rooms = db
+    .prepare<
+      { mapVersionId: number },
+      {
+        code: string;
+        name: string;
+        module_name: string | null;
+        building: string;
+        floor_level: number;
+        node_external_id: string;
+      }
+    >(
+      `
+      SELECT
+        r.code,
+        r.name,
+        r.module_name,
+        f.building,
+        f.floor_level,
+        n.external_id AS node_external_id
+      FROM rooms r
+      INNER JOIN floors f ON f.id = r.floor_id
+      INNER JOIN nodes n ON n.id = r.node_id
+      WHERE r.map_version_id = @mapVersionId
+      ORDER BY r.code ASC
+    `,
+    )
+    .all({ mapVersionId })
+    .map((room) => ({
+      code: room.code,
+      name: room.name,
+      moduleName: room.module_name ?? undefined,
+      building: room.building,
+      floorLevel: room.floor_level,
+      nodeId: room.node_external_id,
+    }));
+
+  const edges = db
+    .prepare<
+      { mapVersionId: number },
+      {
+        from_external_id: string;
+        to_external_id: string;
+        distance: number;
+        accessible: number;
+      }
+    >(
+      `
+      SELECT
+        fn.external_id AS from_external_id,
+        tn.external_id AS to_external_id,
+        e.distance,
+        e.accessible
+      FROM edges e
+      INNER JOIN nodes fn ON fn.id = e.from_node_id
+      INNER JOIN nodes tn ON tn.id = e.to_node_id
+      WHERE e.map_version_id = @mapVersionId
+    `,
+    )
+    .all({ mapVersionId })
+    .map((edge) => ({
+      from: edge.from_external_id,
+      to: edge.to_external_id,
+      distance: edge.distance,
+      accessible: edge.accessible === 1,
+    }));
+
+  return {
+    mapVersionId: mapVersion.id,
+    isActive: mapVersion.is_active === 1,
+    name: mapVersion.name,
+    description: mapVersion.description ?? undefined,
+    startNodeId: startNode.external_id,
+    floors,
+    nodes,
+    rooms,
+    edges,
+  };
 };
 
 export const listMapVersions = (): Array<{

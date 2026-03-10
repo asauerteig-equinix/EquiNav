@@ -11,8 +11,11 @@ import { config } from "./config.js";
 import { requireAuth, requireRole, signAuthToken } from "./auth.js";
 import {
   activateMapVersion,
+  deleteMapVersion,
   getActiveMapDetails,
+  getGlobalStartNodeExternalId,
   getGraphForActiveMap,
+  getMapVersionImportPayload,
   getRoomInActiveMap,
   getUserByUsername,
   importMapVersion,
@@ -94,6 +97,12 @@ app.get("/api/admin/maps", requireAuth, requireRole("admin", "editor"), (_reques
   });
 });
 
+app.get("/api/admin/settings", requireAuth, requireRole("admin", "editor"), (_request, response) => {
+  response.json({
+    globalStartNodeExternalId: getGlobalStartNodeExternalId(),
+  });
+});
+
 app.post("/api/admin/maps/import", requireAuth, requireRole("admin", "editor"), (request, response) => {
   const parsed = mapImportSchema.safeParse(request.body);
   if (!parsed.success) {
@@ -134,6 +143,49 @@ app.post(
     } catch (error) {
       response.status(404).json({
         error: error instanceof Error ? error.message : "Map activation failed.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/maps/:mapVersionId/export",
+  requireAuth,
+  requireRole("admin", "editor"),
+  (request, response) => {
+    const mapVersionId = Number(request.params.mapVersionId);
+    if (!Number.isInteger(mapVersionId) || mapVersionId <= 0) {
+      response.status(400).json({ error: "Invalid map version id." });
+      return;
+    }
+
+    const payload = getMapVersionImportPayload(mapVersionId);
+    if (!payload) {
+      response.status(404).json({ error: "Map version not found." });
+      return;
+    }
+
+    response.json(payload);
+  },
+);
+
+app.delete(
+  "/api/admin/maps/:mapVersionId",
+  requireAuth,
+  requireRole("admin", "editor"),
+  (request, response) => {
+    const mapVersionId = Number(request.params.mapVersionId);
+    if (!Number.isInteger(mapVersionId) || mapVersionId <= 0) {
+      response.status(400).json({ error: "Invalid map version id." });
+      return;
+    }
+
+    try {
+      deleteMapVersion(mapVersionId);
+      response.json({ message: "Map version deleted." });
+    } catch (error) {
+      response.status(404).json({
+        error: error instanceof Error ? error.message : "Delete failed.",
       });
     }
   },

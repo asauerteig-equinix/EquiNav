@@ -97,3 +97,8 @@ export type MapImportPayload = {
     accessible?: boolean;
   }>;
 };
+
+export type MapVersionExportPayload = MapImportPayload & {
+  mapVersionId: number;
+  isActive: boolean;
+};

@@ -1,6 +1,7 @@
 import type {
   ActiveMapInfo,
   MapImportPayload,
+  MapVersionExportPayload,
   MapVersionSummary,
   RoomSearchItem,
   RouteResponse,
@@ -9,7 +10,7 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 type RequestOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   body?: unknown;
   token?: string;
 };
@@ -60,12 +61,30 @@ export const adminApi = {
     const result = await request<{ items: MapVersionSummary[] }>("/api/admin/maps", { token });
     return result.items;
   },
+  getSettings: async (
+    token: string,
+  ): Promise<{
+    globalStartNodeExternalId: string | null;
+  }> =>
+    request<{ globalStartNodeExternalId: string | null }>("/api/admin/settings", {
+      token,
+    }),
+  exportMapVersion: async (token: string, mapVersionId: number): Promise<MapVersionExportPayload> =>
+    request<MapVersionExportPayload>(`/api/admin/maps/${mapVersionId}/export`, {
+      token,
+    }),
   importMap: async (token: string, payload: MapImportPayload): Promise<{ mapVersionId: number }> =>
     request<{ mapVersionId: number }>("/api/admin/maps/import", {
       method: "POST",
       token,
       body: payload,
     }),
+  deleteMapVersion: async (token: string, mapVersionId: number): Promise<void> => {
+    await request<{ message: string }>(`/api/admin/maps/${mapVersionId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
   uploadAsset: async (
     token: string,
     file: File,

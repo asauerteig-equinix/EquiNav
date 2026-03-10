@@ -6,7 +6,7 @@ Indoor-Navigation mit Kiosk-Frontend (Empfang) und separatem Admin-Bereich (Kart
 
 - `Kiosk` unter `/`: Suche nach Raum/Modul und Routenanzeige.
 - `30s Auto-Reset`: Bei Inaktivitaet springt die Kiosk-Ansicht nach 30 Sekunden auf die Startsuche zurueck.
-- `Admin` unter `/admin`: Login, visueller Karteneditor (PNG/JPG/WEBP hochladen, Boxen zeichnen, speichern), Karten-Version aktivieren.
+- `Admin` unter `/admin`: Login, visueller Karteneditor (PNG/JPG/WEBP hochladen, Boxen zeichnen, speichern), Version laden/aktivieren/loeschen.
 - `Backend`: Express + SQLite (WAL), JWT-geschuetzte Admin-APIs.
 - `Container`: Ein Container (`Containerfile`) fuer Podman/VM.
 
@@ -105,6 +105,9 @@ Healthcheck kann spaeter ueber `/api/health` konfiguriert werden.
    - POI
 4. Raumdetails direkt pflegen (Code, Name, Modul).
 5. Karte speichern (optional sofort aktivieren).
+6. Bereits importierte Versionen koennen geladen, aktiviert oder geloescht werden.
+
+Hinweis: Der visuelle Editor bearbeitet aktuell eine Ebene pro Kartenversion.
 
 ## Wichtige Umgebungsvariablen
 
@@ -116,6 +119,8 @@ Healthcheck kann spaeter ueber `/api/health` konfiguriert werden.
 - `ASSETS_DIR`: Verzeichnis fuer hochgeladene Kartenbilder
 - `MAX_JSON_PAYLOAD`: JSON-Limit (wichtig fuer groessere Kartendaten)
 - `CORS_ORIGINS`: fuer lokalen Dev-Betrieb
+
+Der Kiosk-Startpunkt wird backendseitig global fixiert (einmal gesetzt, danach fuer weitere Karten erzwungen).
 
 ## Karten-Importformat (JSON)
 
